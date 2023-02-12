@@ -1,0 +1,2 @@
+gfortran -Ofast -march=native -fwhole-program -o trajectory-shooter main.f90
+./trajectory-shooter
