@@ -2,10 +2,26 @@ program main
 implicit none
 
   integer, parameter :: dp = selected_real_kind(15)
-  integer :: i
+  type fly_data
+    real(dp) :: altitude !! [FT] height above ground
+    real(dp) :: mach     !! [N/A] Mach number
+    real(dp) :: heading  !! [DEG] heading in degrees, 0 = due east along [1, 0, 0]
+    real(dp) :: fly_time !! [SEC] max fly time in seconds
+    real(dp) :: fly_dt   !! [SEC] timestep for generated trajectory in seconds
+  end type fly_data
+  integer :: i, j
+  type(fly_data) :: x0
 
-  do i=0,100000,5000
-    write(*,'(a,i3,a,e12.6,a)') '[',i/1000,'kft] Mach 1 = ',mach1(real(i, dp)),' feet/second'
+  x0%heading = 30.0_dp
+  x0%fly_time = 60.0_dp
+  x0%fly_dt = 5.0_dp
+  do i=20000,35000,5000
+    x0%altitude = real(i, dp)
+    do j=9,12
+      x0%mach = real(j, dp)/10.0_dp
+      call fly(x0)
+      write(*,'(a)') ''
+    end do
   end do
 
   contains
@@ -30,5 +46,29 @@ implicit none
       !! specific gas constant for air comes from engineeringtoolbox: https://www.engineeringtoolbox.com/individual-universal-gas-constant-d_587.html
       mach1_fps = sqrt(yair*1716.541777_dp*T_R)
     end function mach1
+
+    pure elemental function deg2rad(deg_in) result(rad_out)
+    implicit none
+      real(dp), intent(in) :: deg_in
+      real(dp) :: rad_out
+      real(dp), parameter :: rad_per_deg = acos(-1.0_dp)/180.0_dp
+      rad_out = deg_in*rad_per_deg
+    end function deg2rad
+
+    subroutine fly(x0)
+    implicit none
+      type(fly_data), intent(in) :: x0
+      real(dp) :: x(3), v(3), speed_fps, heading_rad, t
+      x = [0.0_dp, 0.0_dp, x0%altitude]
+      speed_fps = x0%mach*mach1(x(3))
+      heading_rad = deg2rad(x0%heading)
+      v = speed_fps*[cos(heading_rad), sin(heading_rad), 0.0_dp]
+      t = 0.0_dp
+      do while (t .le. x0%fly_time)
+        write(*,'(7(a,e22.15))') 'T=',t,',X=',x(1),',Y=',x(2),',Z=',x(3),',VX=',v(1),',VY=',v(2),',VZ=',v(3)
+        t = t + x0%fly_dt
+        x = x + v*x0%fly_dt
+      end do
+    end subroutine fly
 
 end program main
